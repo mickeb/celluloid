@@ -67,10 +67,11 @@ module Celluloid
         else
           string << "State: Running (executing tasks)\n"
           display_backtrace actor.backtrace, string
-          string << "Tasks:\n"
+          string << "\tTasks:\n"
 
           actor.tasks.each_with_index do |task, i|
-            string << "  #{i+1}) #{task.task_class}: #{task.status}\n"
+            string << "\t  #{i+1}) #{task.task_class}: #{task.status}\n"
+            string << "\t"
             display_backtrace task.backtrace, string
           end
         end
@@ -87,8 +88,9 @@ module Celluloid
     end
 
     def display_backtrace(backtrace, output)
+      output << "\t"
       if backtrace
-        output << "\t" << backtrace.join("\n\t") << "\n\n"
+        output << backtrace.join("\n\t") << "\n\n"
       else
         output << "EMPTY BACKTRACE\n\n"
       end
