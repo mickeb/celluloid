@@ -111,7 +111,7 @@ Or install it yourself as:
 
 Inside of your Ruby program, require Celluloid with:
 
-    require 'celluloid/autostart'
+    require 'celluloid'
 
 Supported Platforms
 -------------------

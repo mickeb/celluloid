@@ -3,14 +3,23 @@ require 'thread'
 module Celluloid
   # Maintain a thread pool FOR SPEED!!
   class InternalPool
-    attr_accessor :busy_size, :idle_size, :max_idle
-
     def initialize
-      @pool = []
+      @group = ThreadGroup.new
       @mutex = Mutex.new
-      @busy_size = @idle_size = 0
 
       reset
+    end
+
+    def busy_size
+      @group.list.select(&:busy).size
+    end
+
+    def idle_size
+      @group.list.reject(&:busy).size
+    end
+
+    def running?
+      @group.list.any?
     end
 
     def reset
@@ -22,15 +31,15 @@ module Celluloid
     def get(&block)
       @mutex.synchronize do
         begin
-          if @pool.empty?
+          idle = @group.list.reject(&:busy)
+          if idle.empty?
             thread = create
           else
-            thread = @pool.shift
-            @idle_size -= 1
+            thread = idle.first
           end
         end until thread.status # handle crashed threads
 
-        @busy_size += 1
+        thread.busy = true
         thread[:celluloid_queue] << block
         thread
       end
@@ -39,13 +48,11 @@ module Celluloid
     # Return a thread to the pool
     def put(thread)
       @mutex.synchronize do
-        if @pool.size >= @max_idle
+        thread.busy = false
+        if idle_size >= @max_idle
           thread[:celluloid_queue] << nil
         else
           clean_thread_locals(thread)
-          @pool << thread
-          @idle_size += 1
-          @busy_size -= 1
         end
       end
     end
@@ -66,6 +73,7 @@ module Celluloid
       end
 
       thread[:celluloid_queue] = queue
+      @group.add(thread)
       thread
     end
 
@@ -81,13 +89,24 @@ module Celluloid
 
     def shutdown
       @mutex.synchronize do
-        @max_idle = 0
-        @pool.each do |thread|
+        finalize
+        @group.list.each do |thread|
           thread[:celluloid_queue] << nil
         end
       end
     end
-  end
 
-  self.internal_pool = InternalPool.new
+    def kill
+      @mutex.synchronize do
+        finalize
+        @group.list.each(&:kill)
+      end
+    end
+
+    private
+
+    def finalize
+      @max_idle = 0
+    end
+  end
 end

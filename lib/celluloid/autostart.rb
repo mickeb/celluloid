@@ -1,3 +1,2 @@
 require 'celluloid'
-
-Celluloid.boot
+Celluloid::Logger.deprecate "require 'celluloid/autostart' is deprecated and occurs automatically"

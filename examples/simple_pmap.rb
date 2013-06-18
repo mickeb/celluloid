@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 $:.push File.expand_path('../../lib', __FILE__)
-require 'celluloid/autostart'
+require 'celluloid'
 
 module Enumerable
   # Simple parallel map using Celluloid::Futures
